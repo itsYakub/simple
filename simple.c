@@ -5,10 +5,12 @@
 # include <stdlib.h>
 # include <stdbool.h>
 # include <stdint.h>
+# include <string.h>
 #elif
 # include <cstdio>
 # include <cstdlib>
 # include <cstdint>
+# include <cstring>
 #endif
 
 /* Back - End inclusions */
@@ -16,7 +18,7 @@
 #if !defined (SIMPLE_BACKEND_SOFTWARE)
 # if defined (SIMPLE_BACKEND_OPENGL)
 #  include <GL/gl.h>
-#  if defined (__linux__) && !defined (__ANDROID__)
+#  if defined (__linux__)
 #   include <GL/glx.h>
 #  elif defined (_WIN32)
 #   include <GL/wgl.h>
@@ -28,17 +30,20 @@
 
 /* Front - End inclusions */
 
-#if defined (__linux__) && !defined (__ANDROID__)
+#if defined (__linux__)
 # include <X11/X.h>
 # include <X11/Xlib.h>
 # include <X11/Xutil.h>
 # include <X11/XKBlib.h>
 # include <X11/keysym.h>
 # include <X11/keysymdef.h>
+# include <sys/time.h>
 #elif defined (_WIN32)
 # include <windows.h>
 # include <wingdi.h>
 #endif
+
+/* Macro - Definitions */
 
 #if !defined (SIMPLE_LOG_INFO)
 # define SIMPLE_LOG_INFO(...) (fprintf(stdout, "[ info ] "__VA_ARGS__))
@@ -57,7 +62,7 @@ struct s_simple {
 		uint32_t	height;
 		bool		quit;
 
-#if defined (__linux__) && !defined (__ANDROID__)
+#if defined (__linux__)
 
 		Display		*dsp;
 		Window		r_id;
@@ -74,7 +79,7 @@ struct s_simple {
 
 # endif
 
-		Atom	wm_message_quit;
+		Atom		wm_message_quit;
 
 #elif defined (_WIN32)
 # warning "warn: win32 to be added"
@@ -93,13 +98,23 @@ struct s_simple {
 
 #endif
 
+	struct {
+		double		current;
+		double		previous;
+		double		delta;
+	}	s_time;
+
+	struct {
+		uint8_t	key_current[65536];
+		uint8_t	key_previous[65536];
+	}	s_input;
 };
 
 typedef struct s_simple	t_simple;
 
 static t_simple	SIMPLE;
 
-#if defined (__linux__) && !defined (__ANDROID__)
+#if defined (__linux__)
 # if defined (SIMPLE_BACKEND_OPENGL)
 
 typedef GLXContext (* PFNGLXCREATECONTEXTATTRIBSARBPROC) (Display *, GLXFBConfig, GLXContext, Bool, const int *);
@@ -129,12 +144,17 @@ static int	_context_attributes[] = {
 # endif
 #endif
 
+/*	API
+ * */
+
 int	init(unsigned w, unsigned h, const char *t) {
 	SIMPLE.s_window.width = w;
 	SIMPLE.s_window.height = h;
 	SIMPLE.s_window.quit = false;
+	memset(SIMPLE.s_input.key_current, 0, sizeof(SIMPLE.s_input.key_current));
+	memset(SIMPLE.s_input.key_previous, 0, sizeof(SIMPLE.s_input.key_previous));
 
-#if defined (__linux__) && !defined (__ANDROID__)
+#if defined (__linux__)
 # if defined (SIMPLE_BACKEND_OPENGL)
 
 	GLXFBConfig				*_fbconf_arr;
@@ -225,7 +245,10 @@ int	init(unsigned w, unsigned h, const char *t) {
 		_vi->visual,
 		AllocNone
 	);
-	_swinattr.event_mask = ClientMessage; 
+	_swinattr.event_mask |= ClientMessage
+		| StructureNotifyMask
+		| KeyPressMask
+		| KeyReleaseMask;
 	SIMPLE.s_window.w_id = XCreateWindow(
 		SIMPLE.s_window.dsp,
 		SIMPLE.s_window.r_id,
@@ -292,9 +315,11 @@ int	init(unsigned w, unsigned h, const char *t) {
 
 #endif
 
-#if defined (__linux__) && !defined (__ANDROID__)
+#if defined (__linux__)
+	SIMPLE_LOG_INFO("Platform - GNU/Linux\n");
 	SIMPLE_LOG_INFO("Front - End: X11\n");
 #elif defined (_WIN32)
+	SIMPLE_LOG_INFO("Platform - Windows\n");
 	SIMPLE_LOG_INFO("Front - End: Win32\n");
 #endif
 #if defined (SIMPLE_BACKEND_OPENGL)
@@ -308,7 +333,7 @@ int	init(unsigned w, unsigned h, const char *t) {
 
 int	quit(void) {
 
-#if defined (__linux__) && !defined (__ANDROID__)
+#if defined (__linux__)
 # if defined (SIMPLE_BACKEND_OPENGL)
 
 	glXDestroyContext(SIMPLE.s_window.dsp, SIMPLE.s_window.ctx);
@@ -329,18 +354,56 @@ int	quit(void) {
 }
 
 int	poll_events(void) {
+
+#if defined (__linux__)
+
 	XEvent	_event;
 
+	memcpy(SIMPLE.s_input.key_previous, SIMPLE.s_input.key_current, sizeof(SIMPLE.s_input.key_previous));
 	while (XPending(SIMPLE.s_window.dsp)) {
 		XNextEvent(SIMPLE.s_window.dsp, &_event);
 		switch (_event.type) {
+			case (ConfigureNotify): {
+				window_width();
+				window_height();
+	
+# if defined (SIMPLE_BACKEND_OPENGL)
+
+				glViewport(0, 0, window_width(), window_height());
+
+# endif
+							
+			} break;
+
 			case (ClientMessage): {
 				if ((Atom) _event.xclient.data.l[0] == SIMPLE.s_window.wm_message_quit) {
 					SIMPLE.s_window.quit = true;
 				}
 			} break;
+
+			case (KeyPress): {
+				size_t	_keysym;
+
+				_keysym = XkbKeycodeToKeysym(SIMPLE.s_window.dsp, _event.xkey.keycode, 0, 0);
+				SIMPLE.s_input.key_current[_keysym] = 1;
+			} break;
+			
+			case (KeyRelease): {
+				size_t	_keysym;
+
+				_keysym = XkbKeycodeToKeysym(SIMPLE.s_window.dsp, _event.xkey.keycode, 0, 0);
+				SIMPLE.s_input.key_current[_keysym] = 0;
+			} break;
 		}
 	}
+
+#elif defined (_WIN32)
+# error "error: win32 to be added"
+#endif
+	
+	SIMPLE.s_time.previous = SIMPLE.s_time.current;
+	SIMPLE.s_time.current = get_time();
+
 	return (1);
 }
 
@@ -367,7 +430,7 @@ int	clear(float r, float g, float b, float a) {
 
 	_rgba = 0;
 
-#if defined (__linux__) && !defined (__ANDROID__)
+#if defined (__linux__)
 
 	_rgba |= ((uint8_t) (r * 255)) << (8 * 2);
 	_rgba |= ((uint8_t) (g * 255)) << (8 * 1);
@@ -401,7 +464,7 @@ int	clear(float r, float g, float b, float a) {
 	return (1);
 }
 
-int	refresh(void) {
+int	display(void) {
 
 #if defined (SIMPLE_BACKEND_OPENGL)
 # if defined (__linux__)
@@ -409,7 +472,7 @@ int	refresh(void) {
 	glXSwapBuffers(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id);
 
 # elif defined (_WIN32)
-# error "warn: win32 to be added"
+# error "error: win32 to be added"
 # endif
 #elif defined (SIMPLE_BACKEND_SOFTWARE)
 
@@ -433,27 +496,93 @@ int	refresh(void) {
 int	window_width(void) {
 	XWindowAttributes	_attr;
 
+#if defined (__linux__)
+
 	XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &_attr);
+
+#elif defined (_WIN32)
+# error "error: win32 to be added"
+#endif
+
 	return (SIMPLE.s_window.width = _attr.width);
 }
 
 int	window_height(void) {
 	XWindowAttributes	_attr;
 
+#if defined (__linux__)
+
 	XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &_attr);
+
+#elif defined (_WIN32)
+# error "error: win32 to be added"
+#endif
+
 	return (SIMPLE.s_window.height = _attr.height);
 }
 
 int	monitor_width(void) {
 	XWindowAttributes	_attr;
 
+#if defined (__linux__)
+
 	XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.r_id, &_attr);
+
+#elif defined (_WIN32)
+# error "error: win32 to be added"
+#endif
+
 	return (_attr.width);
 }
 
 int	monitor_hegith(void) {
 	XWindowAttributes	_attr;
 
+#if defined (__linux__)
+
 	XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.r_id, &_attr);
+
+#elif defined (_WIN32)
+# error "error: win32 to be added"
+#endif
+
 	return (_attr.height);
+}
+
+double	delta_time(void) {
+	return (SIMPLE.s_time.delta = (SIMPLE.s_time.current - SIMPLE.s_time.previous) / 1000.0);
+}
+
+double	get_time(void) {
+	double	_time;
+
+#if defined (__linux__)
+	struct timeval	_t;
+
+	if (gettimeofday(&_t, 0) < 0) {
+		return (!SIMPLE_LOG_ERROR("syscall 'gettimeofday' failed\n"));
+	}
+	_time = _t.tv_sec * 1000.0 + _t.tv_usec / 1000.0;
+
+#elif defined (_WIN32)
+# error "error: win32 to be added"
+#endif
+
+	return (_time);
+}
+
+int	key_up(int key) {
+	return (!SIMPLE.s_input.key_current[key]);
+}
+
+int	key_down(int key) {
+	return (SIMPLE.s_input.key_current[key]);
+}
+
+int	key_press(int key) {
+	return (SIMPLE.s_input.key_current[key] && !SIMPLE.s_input.key_previous[key]);
+}
+
+int	key_release(int key) {
+	return (!SIMPLE.s_input.key_current[key] && SIMPLE.s_input.key_previous[key]);
 }
