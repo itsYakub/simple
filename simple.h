@@ -32,4 +32,11 @@ int		key_down(int);
 int		key_press(int);
 int		key_release(int);
 
+/*	API: Software Back - End specific
+ * */
+
+int		*pixels(void);
+int		pixels_width(void);
+int		pixels_height(void);
+
 #endif

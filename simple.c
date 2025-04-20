@@ -13,6 +13,12 @@
 # include <cstring>
 #endif
 
+#if !defined (SIMPLE_BACKEND_SOFTWARE) && !defined (SIMPLE_BACKEND_OPENGL)
+# error "error: no backend specified"
+#elif defined (SIMPLE_BACKEND_SOFTWARE) && defined (SIMPLE_BACKEND_OPENGL)
+# error "error: multiple backends specified"
+#endif
+
 /* Back - End inclusions */
 
 #if !defined (SIMPLE_BACKEND_SOFTWARE)
@@ -364,9 +370,12 @@ int	poll_events(void) {
 		XNextEvent(SIMPLE.s_window.dsp, &_event);
 		switch (_event.type) {
 			case (ConfigureNotify): {
-				window_width();
-				window_height();
-	
+				XWindowAttributes	_attr;
+
+				XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &_attr);
+				SIMPLE.s_window.width = _attr.width;
+				SIMPLE.s_window.height = _attr.height;
+
 # if defined (SIMPLE_BACKEND_OPENGL)
 
 				glViewport(0, 0, window_width(), window_height());
@@ -494,31 +503,11 @@ int	display(void) {
 }
 
 int	window_width(void) {
-	XWindowAttributes	_attr;
-
-#if defined (__linux__)
-
-	XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &_attr);
-
-#elif defined (_WIN32)
-# error "error: win32 to be added"
-#endif
-
-	return (SIMPLE.s_window.width = _attr.width);
+	return (SIMPLE.s_window.width);
 }
 
 int	window_height(void) {
-	XWindowAttributes	_attr;
-
-#if defined (__linux__)
-
-	XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &_attr);
-
-#elif defined (_WIN32)
-# error "error: win32 to be added"
-#endif
-
-	return (SIMPLE.s_window.height = _attr.height);
+	return (SIMPLE.s_window.height);
 }
 
 int	monitor_width(void) {
@@ -585,4 +574,38 @@ int	key_press(int key) {
 
 int	key_release(int key) {
 	return (!SIMPLE.s_input.key_current[key] && SIMPLE.s_input.key_previous[key]);
+}
+
+
+int	*pixels(void) {
+
+#if defined (SIMPLE_BACKEND_SOFTWARE)
+
+	return ((int32_t *) SIMPLE.s_framebuffer.pixels);
+
+#endif
+
+	return (0);
+}
+
+int	pixels_width(void) {
+
+#if defined (SIMPLE_BACKEND_SOFTWARE)
+
+	return (SIMPLE.s_framebuffer.width);
+
+#endif
+
+	return (0);
+}
+
+int	pixels_height(void) {
+
+#if defined (SIMPLE_BACKEND_SOFTWARE)
+
+	return (SIMPLE.s_framebuffer.height);
+
+#endif
+
+	return (0);
 }

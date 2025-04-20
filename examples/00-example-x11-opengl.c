@@ -1,7 +1,6 @@
-#include "../simple.h"
+#define SIMPLE_BACKEND_OPENGL
+#include <simple.h>
 
-#include <math.h>
-#include <stdio.h>
 #include <glad/gl.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
