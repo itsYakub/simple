@@ -6,31 +6,33 @@ SRCS	= $(addsuffix .c, ./simple)
 OBJS	= $(SRCS:.c=.o)
 TARGET	= libsimple.a
 
-.PHONY : all
-
-all : CFLAGS += -DSIMPLE_BACKEND_OPENGL
-# all : CFLAGS += -DSIMPLE_BACKEND_SOFTWARE
-all : $(TARGET)
-
 $(TARGET) : $(OBJS)
 	$(AR) $(AFLAGS) $@ $^
 
 $(OBJS) : %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-.PHONY : release debug
+.PHONY : all
+
+all : $(TARGET)
+
+.PHONY : release
 
 release : CFLAGS += -s -O3 -DRELEASE
 release : all
 
+.PHONY : debug
+
 debug : CFLAGS += -ggdb3 -O0 -DDEBUG
 debug : all
 
-.PHONY : clean install
+.PHONY : clean
 
 clean :
 	rm -f $(OBJS)
 	rm -f $(TARGET)
+
+.PHONY : install
 
 install :
 	sudo cp $(TARGET) /usr/local/lib
