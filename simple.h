@@ -8,7 +8,7 @@
 #  define SIMPLE_VERSION "1.0"
 # endif
 
-/*	API
+/*	API: General
  * */
 
 int		init(unsigned, unsigned, const char *);

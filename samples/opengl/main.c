@@ -32,7 +32,7 @@ int main(void) {
 	GLuint	_vbo;
 	GLuint	_ebo;
 
-	init(800, 600, "OpenGL - X11 - simple");
+	init(800, 600, "Hello, simple!");
 	gladLoadGLLoader((GLADloadproc) glXGetProcAddress);
 
 	/* Creating OpenGL shader objects */
