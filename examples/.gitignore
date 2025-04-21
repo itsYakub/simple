@@ -1,8 +1,0 @@
-# examples
-
-*.out
-*.app
-*.exe
-
-00-example-x11-opengl
-01-example-x11-software

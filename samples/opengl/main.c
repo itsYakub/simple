@@ -1,9 +1,10 @@
-#define SIMPLE_BACKEND_OPENGL
-#include <simple.h>
-
 #include <glad/gl.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
+
+#define SIMPLE_BACKEND_OPENGL
+#define SIMPLE_IMPLEMENTATION
+#include "../../simple.h"
 
 static const GLchar	*___shader_vertex =
 "#version 330 core\n"
@@ -25,13 +26,12 @@ static const GLchar	*___shader_fragment =
 "	f_col = v_col;\n"
 "}\n";
 
-
 int main(void) {
 	GLuint	_shader;
 	GLuint	_vao;
 	GLuint	_vbo;
 	GLuint	_ebo;
-	
+
 	init(800, 600, "OpenGL - X11 - simple");
 	gladLoadGLLoader((GLADloadproc) glXGetProcAddress);
 
@@ -98,7 +98,7 @@ int main(void) {
 		display();
 		poll_events();
 	}
-	
+
 	glDeleteProgram(_shader);
 	glDeleteBuffers(1, &_vbo);
 	glDeleteBuffers(1, &_ebo);
