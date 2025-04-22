@@ -45,9 +45,12 @@ SAPI int	key_down(int);
 SAPI int	key_press(int);
 SAPI int	key_release(int);
 
-SAPI int	mouse_position(void);
+SAPI int	mouse_x(void);
+SAPI int	mouse_y(void);
 SAPI int	button_up(int);
 SAPI int	button_down(int);
+SAPI int	button_press(int);
+SAPI int	button_release(int);
 
 /*	API: Software Back - End specific
  * */
@@ -125,6 +128,13 @@ SAPI int	pixels_height(void);
 #   define SIMPLE_LOG_ERROR(...) (fprintf(stderr, "[ error ] "__VA_ARGS__))
 #  endif /* SIMPLE_LOG_ERROR */
 
+# if !defined (SIMPLE_INPUT_KEYBOARD_KEYS)
+#  define SIMPLE_INPUT_KEYBOARD_KEYS 16384
+# endif
+# if !defined (SIMPLE_INPUT_MOUSE_BUTTONS)
+#  define SIMPLE_INPUT_MOUSE_BUTTONS 8
+# endif
+
 struct s_simple {
 	struct {
 
@@ -175,8 +185,12 @@ struct s_simple {
 	}	s_time;
 
 	struct {
-		uint8_t	key_current[65536];
-		uint8_t	key_previous[65536];
+		uint8_t		key_input_current[SIMPLE_INPUT_KEYBOARD_KEYS];
+		uint8_t		key_input_previous[SIMPLE_INPUT_KEYBOARD_KEYS];
+		uint8_t		mouse_input_current[SIMPLE_INPUT_MOUSE_BUTTONS];
+		uint8_t		mouse_input_previous[SIMPLE_INPUT_MOUSE_BUTTONS];
+		uint32_t	mouse_position_current[2];
+		uint32_t	mouse_position_previous[2];
 	}	s_input;
 };
 
@@ -215,6 +229,9 @@ static int	_context_attributes[] = {
 #  endif /* __linux__ */
 
 /*	API - Linux Implementation
+ *
+ *	Useful sources:
+ *	- http://xahlee.info/linux/linux_x11_mouse_button_number.html
  * */
 
 #  if defined (__linux__)
@@ -223,8 +240,12 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 	SIMPLE.s_window.width = w;
 	SIMPLE.s_window.height = h;
 	SIMPLE.s_window.quit = false;
-	memset(SIMPLE.s_input.key_current, 0, sizeof(SIMPLE.s_input.key_current));
-	memset(SIMPLE.s_input.key_previous, 0, sizeof(SIMPLE.s_input.key_previous));
+	memset(SIMPLE.s_input.key_input_current, 0, sizeof(SIMPLE.s_input.key_input_current));
+	memset(SIMPLE.s_input.key_input_previous, 0, sizeof(SIMPLE.s_input.key_input_previous));
+	memset(SIMPLE.s_input.mouse_input_current, 0, sizeof(SIMPLE.s_input.mouse_input_current));
+	memset(SIMPLE.s_input.mouse_input_previous, 0, sizeof(SIMPLE.s_input.mouse_input_previous));
+	memset(SIMPLE.s_input.mouse_position_current, 0, sizeof(SIMPLE.s_input.mouse_position_current));
+	memset(SIMPLE.s_input.mouse_position_previous, 0, sizeof(SIMPLE.s_input.mouse_position_previous));
 
 #   if defined (SIMPLE_BACKEND_OPENGL)
 
@@ -319,7 +340,10 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 	_swinattr.event_mask |= ClientMessage
 		| StructureNotifyMask
 		| KeyPressMask
-		| KeyReleaseMask;
+		| KeyReleaseMask
+		| PointerMotionMask
+		| ButtonPressMask
+		| ButtonReleaseMask;
 	SIMPLE.s_window.w_id = XCreateWindow(
 		SIMPLE.s_window.dsp,
 		SIMPLE.s_window.r_id,
@@ -414,7 +438,9 @@ SAPI int	quit(void) {
 SAPI int	poll_events(void) {
 	XEvent	_event;
 
-	memcpy(SIMPLE.s_input.key_previous, SIMPLE.s_input.key_current, sizeof(SIMPLE.s_input.key_previous));
+	memcpy(SIMPLE.s_input.key_input_previous, SIMPLE.s_input.key_input_current, sizeof(SIMPLE.s_input.key_input_previous));
+	memcpy(SIMPLE.s_input.mouse_input_previous, SIMPLE.s_input.mouse_input_current, sizeof(SIMPLE.s_input.mouse_input_previous));
+	memcpy(SIMPLE.s_input.mouse_position_previous, SIMPLE.s_input.mouse_position_current, sizeof(SIMPLE.s_input.mouse_position_previous));
 	while (XPending(SIMPLE.s_window.dsp)) {
 		XNextEvent(SIMPLE.s_window.dsp, &_event);
 		switch (_event.type) {
@@ -443,14 +469,53 @@ SAPI int	poll_events(void) {
 				size_t	_keysym;
 
 				_keysym = XkbKeycodeToKeysym(SIMPLE.s_window.dsp, _event.xkey.keycode, 0, 0);
-				SIMPLE.s_input.key_current[_keysym] = 1;
+				SIMPLE.s_input.key_input_current[_keysym] = 1;
 			} break;
 			
 			case (KeyRelease): {
 				size_t	_keysym;
 
 				_keysym = XkbKeycodeToKeysym(SIMPLE.s_window.dsp, _event.xkey.keycode, 0, 0);
-				SIMPLE.s_input.key_current[_keysym] = 0;
+				SIMPLE.s_input.key_input_current[_keysym] = 0;
+			} break;
+
+			case (ButtonPress): {
+				uint8_t	*_ptr;
+
+				switch (_event.xbutton.button) {
+					case (1): { _ptr = &SIMPLE.s_input.mouse_input_current[0]; } break;
+					case (2): { _ptr = &SIMPLE.s_input.mouse_input_current[1]; } break;
+					case (3): { _ptr = &SIMPLE.s_input.mouse_input_current[2]; } break;
+					case (8): { _ptr = &SIMPLE.s_input.mouse_input_current[3]; } break;
+					case (9): { _ptr = &SIMPLE.s_input.mouse_input_current[4]; } break;
+					default: { _ptr = 0; } break;
+				}
+				if (!_ptr) {
+					break;
+				}
+				*_ptr = 1;
+			} break;
+
+			case (ButtonRelease): {
+				uint8_t	*_ptr;
+
+				switch (_event.xbutton.button) {
+					case (1): { _ptr = &SIMPLE.s_input.mouse_input_current[0]; } break;
+					case (2): { _ptr = &SIMPLE.s_input.mouse_input_current[1]; } break;
+					case (3): { _ptr = &SIMPLE.s_input.mouse_input_current[2]; } break;
+					case (8): { _ptr = &SIMPLE.s_input.mouse_input_current[3]; } break;
+					case (9): { _ptr = &SIMPLE.s_input.mouse_input_current[4]; } break;
+					default: { _ptr = 0; } break;
+				}
+				if (!_ptr) {
+					break;
+				}
+				*_ptr = 0;
+			} break;
+
+			case (MotionNotify): {
+				SIMPLE.s_input.mouse_position_current[0] = _event.xmotion.x;
+				SIMPLE.s_input.mouse_position_current[1] = _event.xmotion.y;
 			} break;
 		}
 	}
@@ -568,19 +633,43 @@ SAPI double	get_time(void) {
 }
 
 SAPI int	key_up(int key) {
-	return (!SIMPLE.s_input.key_current[key]);
+	return (!SIMPLE.s_input.key_input_current[key]);
 }
 
 SAPI int	key_down(int key) {
-	return (SIMPLE.s_input.key_current[key]);
+	return (SIMPLE.s_input.key_input_current[key]);
 }
 
 SAPI int	key_press(int key) {
-	return (SIMPLE.s_input.key_current[key] && !SIMPLE.s_input.key_previous[key]);
+	return (SIMPLE.s_input.key_input_current[key] && !SIMPLE.s_input.key_input_previous[key]);
 }
 
 SAPI int	key_release(int key) {
-	return (!SIMPLE.s_input.key_current[key] && SIMPLE.s_input.key_previous[key]);
+	return (!SIMPLE.s_input.key_input_current[key] && SIMPLE.s_input.key_input_previous[key]);
+}
+
+SAPI int	mouse_x(void) {
+	return (SIMPLE.s_input.mouse_position_current[0]);
+}
+
+SAPI int	mouse_y(void) {
+	return (SIMPLE.s_input.mouse_position_current[1]);
+}
+
+SAPI int	button_up(int button) {
+	return (!SIMPLE.s_input.mouse_input_current[button]);
+}
+
+SAPI int	button_down(int button) {
+	return (SIMPLE.s_input.mouse_input_current[button]);
+}
+
+SAPI int	button_press(int button) {
+	return (SIMPLE.s_input.mouse_input_current[button] && !SIMPLE.s_input.mouse_input_previous[button]);
+}
+
+SAPI int	button_release(int button) {
+	return (!SIMPLE.s_input.mouse_input_current[button] && SIMPLE.s_input.mouse_input_previous[button]);
 }
 
 SAPI int	*pixels(void) {
