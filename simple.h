@@ -36,6 +36,7 @@ int		key_release(int);
  * */
 
 int		*pixels(void);
+int		*pixel(int, int);
 int		pixels_width(void);
 int		pixels_height(void);
 
@@ -615,12 +616,23 @@ int	key_release(int key) {
 	return (!SIMPLE.s_input.key_current[key] && SIMPLE.s_input.key_previous[key]);
 }
 
-
 int	*pixels(void) {
 
 #  if defined (SIMPLE_BACKEND_SOFTWARE)
 
 	return ((int32_t *) SIMPLE.s_framebuffer.pixels);
+
+#  endif
+
+	return (0);
+}
+
+int		*pixel(int x, int y) {
+#  if defined (SIMPLE_BACKEND_SOFTWARE)
+
+	x = (x < 0 ? 0 : (x >= SIMPLE.s_framebuffer.width ? SIMPLE.s_framebuffer.width - 1 : x));
+	y = (y < 0 ? 0 : (y >= SIMPLE.s_framebuffer.height ? SIMPLE.s_framebuffer.height - 1 : y));
+	return ((int32_t *) &SIMPLE.s_framebuffer.pixels[y * pixels_width() + x]);
 
 #  endif
 
