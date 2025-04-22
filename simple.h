@@ -1,25 +1,25 @@
 #if defined (__cplusplus)
 # pragma once
-#endif
+#endif /* __cplusplus */
 #if !defined (_simple_h_)
 # define _simple_h_
 
 # if !defined (SIMPLE_VERSION)
 #  define SIMPLE_VERSION "1.0"
-# endif
+# endif /* SIMPLE_VERSION */
 # if !defined (SAPI)
 #  if !defined (__cplusplus)
 #   define SAPI static inline
 #  else
 #   define SAPI extern "C"
-#  endif
-# endif
+#  endif /* __cplusplus */
+# endif /* SAPI */
 
 # if defined (__cplusplus)
 
 extern "C" {
 
-# endif
+# endif /* __cplusplus */
 
 /*	API: General
  * */
@@ -61,7 +61,7 @@ SAPI int	pixels_height(void);
 
 }
 
-# endif
+# endif /* __cplusplus */
 
 # if defined (SIMPLE_IMPLEMENTATION)
 #  if !defined (__cplusplus)
@@ -75,13 +75,13 @@ SAPI int	pixels_height(void);
 #   include <cstdlib>
 #   include <cstdint>
 #   include <cstring>
-#  endif
+#  endif /* __cplusplus */
 
 #  if !defined (SIMPLE_BACKEND_SOFTWARE) && !defined (SIMPLE_BACKEND_OPENGL)
 #   error "error: no backend specified"
 #  elif defined (SIMPLE_BACKEND_SOFTWARE) && defined (SIMPLE_BACKEND_OPENGL)
 #   error "error: multiple backends specified"
-#  endif
+#  endif /* SIMPLE_BACKEND_SOFTWARE, SIMPLE_BACKEND_OPENGL */
 
 /* Back - End inclusions */
 
@@ -94,9 +94,9 @@ SAPI int	pixels_height(void);
 #     include <GL/wgl.h>
 #    else
 #     error "error: no backend selected"
-#    endif
-#   endif
-#  endif
+#    endif /* __linux__, _WIN32 */
+#   endif /* SIMPLE_BACKEND_OPENGL */
+#  endif /* SIMPLE_BACKEND_SOFTWARE */
 
 /* Front - End inclusions */
 
@@ -111,19 +111,19 @@ SAPI int	pixels_height(void);
 #  elif defined (_WIN32)
 #   include <windows.h>
 #   include <wingdi.h>
-#  endif
+#  endif /* __linux__, _WIN32 */
 
 /* Macro - Definitions */
 
 #  if !defined (SIMPLE_LOG_INFO)
 #   define SIMPLE_LOG_INFO(...) (fprintf(stdout, "[ info ] "__VA_ARGS__))
-#  endif
+#  endif /* SIMPLE_LOG_INFO */
 #  if !defined (SIMPLE_LOG_WARN)
 #   define SIMPLE_LOG_WARN(...) (fprintf(stderr, "[ warn ] "__VA_ARGS__))
-#  endif
+#  endif /* SIMPLE_LOG_WARN */
 #  if !defined (SIMPLE_LOG_ERROR)
 #   define SIMPLE_LOG_ERROR(...) (fprintf(stderr, "[ error ] "__VA_ARGS__))
-#  endif
+#  endif /* SIMPLE_LOG_ERROR */
 
 struct s_simple {
 	struct {
@@ -147,13 +147,13 @@ struct s_simple {
 		XImage		*ximg;
 		GC			ctx;
 
-#   endif
+#   endif /* SIMPLE_BACKEND_OPENGL, SIMPLE_BACKEND_SOFTWARE */
 
 		Atom		wm_message_quit;
 
 #  elif defined (_WIN32)
 #   warning "warn: win32 to be added"
-#  endif
+#  endif /* __linux__, _WIN32 */
 
 	}	s_window;
 
@@ -166,7 +166,7 @@ struct s_simple {
 		uint32_t	bits;
 	}	s_framebuffer;
 
-#  endif
+#  endif /* SIMPLE_BACKEND_SOFTWARE */
 
 	struct {
 		double		current;
@@ -211,11 +211,13 @@ static int	_context_attributes[] = {
 	None
 };
 
-#   endif
-#  endif
+#   endif /* SIMPLE_BACKEND_OPENGL */
+#  endif /* __linux__ */
 
-/*	API
+/*	API - Linux Implementation
  * */
+
+#  if defined (__linux__)
 
 SAPI int	init(unsigned w, unsigned h, const char *t) {
 	SIMPLE.s_window.width = w;
@@ -224,7 +226,6 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 	memset(SIMPLE.s_input.key_current, 0, sizeof(SIMPLE.s_input.key_current));
 	memset(SIMPLE.s_input.key_previous, 0, sizeof(SIMPLE.s_input.key_previous));
 
-#  if defined (__linux__)
 #   if defined (SIMPLE_BACKEND_OPENGL)
 
 	GLXFBConfig				*_fbconf_arr;
@@ -238,7 +239,7 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 
 	XWindowAttributes		_winattr;
 
-#   endif
+#   endif /* SIMPLE_BACKEND_OPENGL, SIMPLE_BACKEND_SOFTWARE */
 
 	XSetWindowAttributes	_swinattr;
 	XVisualInfo				*_vi;
@@ -307,7 +308,7 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 		return (!SIMPLE_LOG_ERROR("Couldn't create an XVisualInfo object\n"));
 	}
 
-#   endif
+#   endif /* SIMPLE_BACKEND_OPENGL, SIMPLE_BACKEND_SOFTWARE */
 
 	_swinattr.colormap = XCreateColormap(
 		SIMPLE.s_window.dsp,
@@ -373,36 +374,26 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 		SIMPLE.s_framebuffer.width * sizeof(int32_t)
 	);
 
-#   endif
+#   endif /* SIMPLE_BACKEND_OPENGL, SIMPLE_BACKEND_SOFTWARE */
 
 	SIMPLE.s_window.wm_message_quit = XInternAtom(SIMPLE.s_window.dsp, "WM_DELETE_WINDOW", 0);
 	XSetWMProtocols(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &SIMPLE.s_window.wm_message_quit, 1);
 	XMapWindow(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id);
 	XFree(_vi);
 
-#  elif defined (_WIN32)
-
-#  endif
-
-#  if defined (__linux__)
 	SIMPLE_LOG_INFO("Platform - GNU/Linux\n");
 	SIMPLE_LOG_INFO("Front - End: X11\n");
-#  elif defined (_WIN32)
-	SIMPLE_LOG_INFO("Platform - Windows\n");
-	SIMPLE_LOG_INFO("Front - End: Win32\n");
-#  endif
 #  if defined (SIMPLE_BACKEND_OPENGL)
 	SIMPLE_LOG_INFO("Back - End: OpenGL\n");
 #  elif defined (SIMPLE_BACKEND_SOFTWARE)
 	SIMPLE_LOG_INFO("Back - End: Software\n");
-#  endif
+#  endif /* SIMPLE_BACKEND_OPENGL, SIMPLE_BACKEND_SOFTWARE */
 
 	return (1);
 }
 
 SAPI int	quit(void) {
 
-#  if defined (__linux__)
 #   if defined (SIMPLE_BACKEND_OPENGL)
 
 	glXDestroyContext(SIMPLE.s_window.dsp, SIMPLE.s_window.ctx);
@@ -411,21 +402,16 @@ SAPI int	quit(void) {
 
 	XDestroyImage(SIMPLE.s_window.ximg);
 
-#   endif
+#   endif /* SIMPLE_BACKEND_OPENGL, SIMPLE_BACKEND_SOFTWARE */
 
 	XUnmapWindow(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id);
 	XDestroyWindow(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id);
 	XCloseDisplay(SIMPLE.s_window.dsp);
 
-#  endif
-
 	return (1);
 }
 
 SAPI int	poll_events(void) {
-
-#  if defined (__linux__)
-
 	XEvent	_event;
 
 	memcpy(SIMPLE.s_input.key_previous, SIMPLE.s_input.key_current, sizeof(SIMPLE.s_input.key_previous));
@@ -443,7 +429,7 @@ SAPI int	poll_events(void) {
 
 				glViewport(0, 0, window_width(), window_height());
 
-#   endif
+#   endif /* SIMPLE_BACKEND_OPENGL */
 							
 			} break;
 
@@ -468,10 +454,6 @@ SAPI int	poll_events(void) {
 			} break;
 		}
 	}
-
-#  elif defined (_WIN32)
-#   error "error: win32 to be added"
-#  endif
 	
 	SIMPLE.s_time.previous = SIMPLE.s_time.current;
 	SIMPLE.s_time.current = get_time();
@@ -501,22 +483,10 @@ SAPI int	clear(float r, float g, float b, float a) {
 	uint32_t	_h;
 
 	_rgba = 0;
-
-#  if defined (__linux__)
-
 	_rgba |= ((uint8_t) (r * 255)) << (8 * 2);
 	_rgba |= ((uint8_t) (g * 255)) << (8 * 1);
 	_rgba |= ((uint8_t) (b * 255)) << (8 * 0);
 	_rgba |= ((uint8_t) (a * 255)) << (8 * 3);
-
-#  elif defined (_WIN32)
-
-	_rgba |= ((uint8_t) (r * 255)) << (8 * 0);
-	_rgba |= ((uint8_t) (g * 255)) << (8 * 1);
-	_rgba |= ((uint8_t) (b * 255)) << (8 * 2);
-	_rgba |= ((uint8_t) (a * 255)) << (8 * 3);
-
-#  endif
 
 	_w = window_width();
 	_h = window_height();
@@ -531,7 +501,7 @@ SAPI int	clear(float r, float g, float b, float a) {
 		}
 	}
 
-#  endif
+#  endif /* SIMPLE_BACKEND_OPENGL, SIMPLE_BACKEND_SOFTWARE */
 
 	return (1);
 }
@@ -539,13 +509,9 @@ SAPI int	clear(float r, float g, float b, float a) {
 SAPI int	display(void) {
 
 #  if defined (SIMPLE_BACKEND_OPENGL)
-#   if defined (__linux__)
 
 	glXSwapBuffers(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id);
 
-#   elif defined (_WIN32)
-#   error "error: win32 to be added"
-#   endif
 #  elif defined (SIMPLE_BACKEND_SOFTWARE)
 
 	XPutImage(
@@ -558,10 +524,8 @@ SAPI int	display(void) {
 		SIMPLE.s_framebuffer.height
 	);
 
-#   if defined (__linux__)
-#   elif defined (_WIN32)
-#   endif
-#  endif
+#  endif /* SIMPLE_BACKEND_OPENGL, SIMPLE_BACKEND_SOFTWARE */
+
 	return (1);
 }
 
@@ -576,28 +540,14 @@ SAPI int	window_height(void) {
 SAPI int	monitor_width(void) {
 	XWindowAttributes	_attr;
 
-#  if defined (__linux__)
-
 	XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.r_id, &_attr);
-
-#  elif defined (_WIN32)
-#   error "error: win32 to be added"
-#  endif
-
 	return (_attr.width);
 }
 
 SAPI int	monitor_hegith(void) {
 	XWindowAttributes	_attr;
 
-#  if defined (__linux__)
-
 	XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.r_id, &_attr);
-
-#  elif defined (_WIN32)
-#   error "error: win32 to be added"
-#  endif
-
 	return (_attr.height);
 }
 
@@ -606,19 +556,13 @@ SAPI double	delta_time(void) {
 }
 
 SAPI double	get_time(void) {
-	double	_time;
-
-#  if defined (__linux__)
 	struct timeval	_t;
+	double			_time;
 
 	if (gettimeofday(&_t, 0) < 0) {
 		return (!SIMPLE_LOG_ERROR("syscall 'gettimeofday' failed\n"));
 	}
 	_time = _t.tv_sec * 1000.0 + _t.tv_usec / 1000.0;
-
-#  elif defined (_WIN32)
-#   error "error: win32 to be added"
-#  endif
 
 	return (_time);
 }
@@ -645,19 +589,20 @@ SAPI int	*pixels(void) {
 
 	return ((int32_t *) SIMPLE.s_framebuffer.pixels);
 
-#  endif
+#  endif /* SIMPLE_BACKEND_SOFTWARE */
 
 	return (0);
 }
 
 SAPI int	*pixel(int x, int y) {
+
 #  if defined (SIMPLE_BACKEND_SOFTWARE)
 
 	x = (x < 0 ? 0 : (x >= SIMPLE.s_framebuffer.width ? SIMPLE.s_framebuffer.width - 1 : x));
 	y = (y < 0 ? 0 : (y >= SIMPLE.s_framebuffer.height ? SIMPLE.s_framebuffer.height - 1 : y));
 	return ((int32_t *) &SIMPLE.s_framebuffer.pixels[y * pixels_width() + x]);
 
-#  endif
+#  endif /* SIMPLE_BACKEND_SOFTWARE */
 
 	return (0);
 }
@@ -668,7 +613,7 @@ SAPI int	pixels_width(void) {
 
 	return (SIMPLE.s_framebuffer.width);
 
-#  endif
+#  endif /* SIMPLE_BACKEND_SOFTWARE */
 
 	return (0);
 }
@@ -679,9 +624,16 @@ SAPI int	pixels_height(void) {
 
 	return (SIMPLE.s_framebuffer.height);
 
-#  endif
+#  endif /* SIMPLE_BACKEND_SOFTWARE */
 
 	return (0);
 }
-# endif
-#endif
+
+/*	API - Windows Implementation
+ * */
+
+#  elif defined (_WIN32)
+#   error "win32 to be added"
+#  endif /* __linux__, _WIN32 */
+# endif /* SIMPLE_IMPLEMENTATION */
+#endif /* _simple_h_ */
