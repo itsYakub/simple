@@ -7,38 +7,61 @@
 # if !defined (SIMPLE_VERSION)
 #  define SIMPLE_VERSION "1.0"
 # endif
+# if !defined (SAPI)
+#  if !defined (__cplusplus)
+#   define SAPI static inline
+#  else
+#   define SAPI extern "C"
+#  endif
+# endif
+
+# if defined (__cplusplus)
+
+extern "C" {
+
+# endif
 
 /*	API: General
  * */
 
-int		init(unsigned, unsigned, const char *);
-int		quit(void);
+SAPI int	init(unsigned, unsigned, const char *);
+SAPI int	quit(void);
 
-int		poll_events(void);
-int		should_quit(void);
-int		clear(float, float, float, float);
-int		display(void);
+SAPI int	poll_events(void);
+SAPI int	should_quit(void);
+SAPI int	clear(float, float, float, float);
+SAPI int	display(void);
 
-int		window_width(void);
-int		window_height(void);
-int		monitor_width(void);
-int		monitor_height(void);
+SAPI int	window_width(void);
+SAPI int	window_height(void);
+SAPI int	monitor_width(void);
+SAPI int	monitor_height(void);
 
-double	delta_time(void);
-double	get_time(void);
+SAPI double	delta_time(void);
+SAPI double	get_time(void);
 
-int		key_up(int);
-int		key_down(int);
-int		key_press(int);
-int		key_release(int);
+SAPI int	key_up(int);
+SAPI int	key_down(int);
+SAPI int	key_press(int);
+SAPI int	key_release(int);
+
+SAPI int	mouse_position(void);
+SAPI int	button_up(int);
+SAPI int	button_down(int);
 
 /*	API: Software Back - End specific
  * */
 
-int		*pixels(void);
-int		*pixel(int, int);
-int		pixels_width(void);
-int		pixels_height(void);
+SAPI int	*pixels(void);
+SAPI int	*pixel(int, int);
+SAPI int	pixels_width(void);
+SAPI int	pixels_height(void);
+
+# if defined (__cplusplus)
+
+}
+
+# endif
 
 # if defined (SIMPLE_IMPLEMENTATION)
 #  if !defined (__cplusplus)
@@ -194,7 +217,7 @@ static int	_context_attributes[] = {
 /*	API
  * */
 
-int	init(unsigned w, unsigned h, const char *t) {
+SAPI int	init(unsigned w, unsigned h, const char *t) {
 	SIMPLE.s_window.width = w;
 	SIMPLE.s_window.height = h;
 	SIMPLE.s_window.quit = false;
@@ -377,7 +400,7 @@ int	init(unsigned w, unsigned h, const char *t) {
 	return (1);
 }
 
-int	quit(void) {
+SAPI int	quit(void) {
 
 #  if defined (__linux__)
 #   if defined (SIMPLE_BACKEND_OPENGL)
@@ -399,7 +422,7 @@ int	quit(void) {
 	return (1);
 }
 
-int	poll_events(void) {
+SAPI int	poll_events(void) {
 
 #  if defined (__linux__)
 
@@ -456,11 +479,11 @@ int	poll_events(void) {
 	return (1);
 }
 
-int	should_quit(void) {
+SAPI int	should_quit(void) {
 	return (SIMPLE.s_window.quit);
 }
 
-int	clear(float r, float g, float b, float a) {
+SAPI int	clear(float r, float g, float b, float a) {
 	(void) r;
 	(void) g;
 	(void) b;
@@ -513,7 +536,7 @@ int	clear(float r, float g, float b, float a) {
 	return (1);
 }
 
-int	display(void) {
+SAPI int	display(void) {
 
 #  if defined (SIMPLE_BACKEND_OPENGL)
 #   if defined (__linux__)
@@ -542,15 +565,15 @@ int	display(void) {
 	return (1);
 }
 
-int	window_width(void) {
+SAPI int	window_width(void) {
 	return (SIMPLE.s_window.width);
 }
 
-int	window_height(void) {
+SAPI int	window_height(void) {
 	return (SIMPLE.s_window.height);
 }
 
-int	monitor_width(void) {
+SAPI int	monitor_width(void) {
 	XWindowAttributes	_attr;
 
 #  if defined (__linux__)
@@ -564,7 +587,7 @@ int	monitor_width(void) {
 	return (_attr.width);
 }
 
-int	monitor_hegith(void) {
+SAPI int	monitor_hegith(void) {
 	XWindowAttributes	_attr;
 
 #  if defined (__linux__)
@@ -578,11 +601,11 @@ int	monitor_hegith(void) {
 	return (_attr.height);
 }
 
-double	delta_time(void) {
+SAPI double	delta_time(void) {
 	return (SIMPLE.s_time.delta = (SIMPLE.s_time.current - SIMPLE.s_time.previous) / 1000.0);
 }
 
-double	get_time(void) {
+SAPI double	get_time(void) {
 	double	_time;
 
 #  if defined (__linux__)
@@ -600,23 +623,23 @@ double	get_time(void) {
 	return (_time);
 }
 
-int	key_up(int key) {
+SAPI int	key_up(int key) {
 	return (!SIMPLE.s_input.key_current[key]);
 }
 
-int	key_down(int key) {
+SAPI int	key_down(int key) {
 	return (SIMPLE.s_input.key_current[key]);
 }
 
-int	key_press(int key) {
+SAPI int	key_press(int key) {
 	return (SIMPLE.s_input.key_current[key] && !SIMPLE.s_input.key_previous[key]);
 }
 
-int	key_release(int key) {
+SAPI int	key_release(int key) {
 	return (!SIMPLE.s_input.key_current[key] && SIMPLE.s_input.key_previous[key]);
 }
 
-int	*pixels(void) {
+SAPI int	*pixels(void) {
 
 #  if defined (SIMPLE_BACKEND_SOFTWARE)
 
@@ -627,7 +650,7 @@ int	*pixels(void) {
 	return (0);
 }
 
-int		*pixel(int x, int y) {
+SAPI int	*pixel(int x, int y) {
 #  if defined (SIMPLE_BACKEND_SOFTWARE)
 
 	x = (x < 0 ? 0 : (x >= SIMPLE.s_framebuffer.width ? SIMPLE.s_framebuffer.width - 1 : x));
@@ -639,7 +662,7 @@ int		*pixel(int x, int y) {
 	return (0);
 }
 
-int	pixels_width(void) {
+SAPI int	pixels_width(void) {
 
 #  if defined (SIMPLE_BACKEND_SOFTWARE)
 
@@ -650,7 +673,7 @@ int	pixels_width(void) {
 	return (0);
 }
 
-int	pixels_height(void) {
+SAPI int	pixels_height(void) {
 
 #  if defined (SIMPLE_BACKEND_SOFTWARE)
 
@@ -661,5 +684,4 @@ int	pixels_height(void) {
 	return (0);
 }
 # endif
-
 #endif
