@@ -45,8 +45,10 @@ SAPI int	key_down(int);
 SAPI int	key_press(int);
 SAPI int	key_release(int);
 
-SAPI int	mouse_x(void);
-SAPI int	mouse_y(void);
+SAPI int	mouse_position_x(void);
+SAPI int	mouse_position_y(void);
+SAPI int	mouse_delta_x(void);
+SAPI int	mouse_delta_y(void);
 SAPI int	button_up(int);
 SAPI int	button_down(int);
 SAPI int	button_press(int);
@@ -73,7 +75,7 @@ SAPI int	pixels_height(void);
 #   include <stdbool.h>
 #   include <stdint.h>
 #   include <string.h>
-#  elif
+#  elif defined (__cplusplus)
 #   include <cstdio>
 #   include <cstdlib>
 #   include <cstdint>
@@ -119,13 +121,13 @@ SAPI int	pixels_height(void);
 /* Macro - Definitions */
 
 #  if !defined (SIMPLE_LOG_INFO)
-#   define SIMPLE_LOG_INFO(...) (fprintf(stdout, "[ info ] "__VA_ARGS__))
+#   define SIMPLE_LOG_INFO(...) (fprintf(stdout, "[ info ] " __VA_ARGS__))
 #  endif /* SIMPLE_LOG_INFO */
 #  if !defined (SIMPLE_LOG_WARN)
-#   define SIMPLE_LOG_WARN(...) (fprintf(stderr, "[ warn ] "__VA_ARGS__))
+#   define SIMPLE_LOG_WARN(...) (fprintf(stderr, "[ warn ] " __VA_ARGS__))
 #  endif /* SIMPLE_LOG_WARN */
 #  if !defined (SIMPLE_LOG_ERROR)
-#   define SIMPLE_LOG_ERROR(...) (fprintf(stderr, "[ error ] "__VA_ARGS__))
+#   define SIMPLE_LOG_ERROR(...) (fprintf(stderr, "[ error ] " __VA_ARGS__))
 #  endif /* SIMPLE_LOG_ERROR */
 
 # if !defined (SIMPLE_INPUT_KEYBOARD_KEYS)
@@ -553,8 +555,8 @@ SAPI int	clear(float r, float g, float b, float a) {
 	_rgba |= ((uint8_t) (b * 255)) << (8 * 0);
 	_rgba |= ((uint8_t) (a * 255)) << (8 * 3);
 
-	_w = window_width();
-	_h = window_height();
+	_w = SIMPLE.s_window.width;
+	_h = SIMPLE.s_window.height;
 	for (size_t y = 0; y < _h; y++) {
 		for (size_t x = 0; x < _w; x++) {
 			size_t	_pos;
@@ -648,12 +650,20 @@ SAPI int	key_release(int key) {
 	return (!SIMPLE.s_input.key_input_current[key] && SIMPLE.s_input.key_input_previous[key]);
 }
 
-SAPI int	mouse_x(void) {
+SAPI int	mouse_position_x(void) {
 	return (SIMPLE.s_input.mouse_position_current[0]);
 }
 
-SAPI int	mouse_y(void) {
+SAPI int	mouse_position_y(void) {
 	return (SIMPLE.s_input.mouse_position_current[1]);
+}
+
+SAPI int	mouse_delta_x(void) {
+	return (SIMPLE.s_input.mouse_position_current[0] - SIMPLE.s_input.mouse_position_previous[0]);
+}
+
+SAPI int	mouse_delta_y(void) {
+	return (SIMPLE.s_input.mouse_position_current[1] - SIMPLE.s_input.mouse_position_previous[1]);
 }
 
 SAPI int	button_up(int button) {
@@ -684,6 +694,8 @@ SAPI int	*pixels(void) {
 }
 
 SAPI int	*pixel(int x, int y) {
+	(void) x;
+	(void) y;
 
 #  if defined (SIMPLE_BACKEND_SOFTWARE)
 
