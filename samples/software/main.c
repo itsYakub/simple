@@ -11,6 +11,7 @@ int main(void) {
 
 	init(800, 600, "Hello, simple!");
 	while (!should_quit()) {
+		printf("%i %i\n", mouse_position_x(), mouse_position_y());
 		clear(0.2f, 0.2f, 0.2f, 1.0f);
 		for (int i = 1; i < window_width() / 100; i++) {
 			for (int j = 1; j < window_height() / 100; j++) {

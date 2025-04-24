@@ -47,6 +47,8 @@ SAPI int	key_release(int);
 
 SAPI int	mouse_position_x(void);
 SAPI int	mouse_position_y(void);
+SAPI int	set_mouse_offset(int, int);
+SAPI int	set_mouse_scale(float, float);
 SAPI int	mouse_delta_x(void);
 SAPI int	mouse_delta_y(void);
 SAPI int	button_up(int);
@@ -139,7 +141,6 @@ SAPI int	pixels_height(void);
 
 struct s_simple {
 	struct {
-
 		uint32_t	width;
 		uint32_t	height;
 		bool		quit;
@@ -191,8 +192,11 @@ struct s_simple {
 		uint8_t		key_input_previous[SIMPLE_INPUT_KEYBOARD_KEYS];
 		uint8_t		mouse_input_current[SIMPLE_INPUT_MOUSE_BUTTONS];
 		uint8_t		mouse_input_previous[SIMPLE_INPUT_MOUSE_BUTTONS];
-		uint32_t	mouse_position_current[2];
-		uint32_t	mouse_position_previous[2];
+
+		float		mouse_position_scale[2];
+		int32_t		mouse_position_offset[2];
+		int32_t		mouse_position_current[2];
+		int32_t		mouse_position_previous[2];
 	}	s_input;
 };
 
@@ -242,12 +246,8 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 	SIMPLE.s_window.width = w;
 	SIMPLE.s_window.height = h;
 	SIMPLE.s_window.quit = false;
-	memset(SIMPLE.s_input.key_input_current, 0, sizeof(SIMPLE.s_input.key_input_current));
-	memset(SIMPLE.s_input.key_input_previous, 0, sizeof(SIMPLE.s_input.key_input_previous));
-	memset(SIMPLE.s_input.mouse_input_current, 0, sizeof(SIMPLE.s_input.mouse_input_current));
-	memset(SIMPLE.s_input.mouse_input_previous, 0, sizeof(SIMPLE.s_input.mouse_input_previous));
-	memset(SIMPLE.s_input.mouse_position_current, 0, sizeof(SIMPLE.s_input.mouse_position_current));
-	memset(SIMPLE.s_input.mouse_position_previous, 0, sizeof(SIMPLE.s_input.mouse_position_previous));
+	memset(&SIMPLE.s_input, 0, sizeof(SIMPLE.s_input));
+	memcpy(SIMPLE.s_input.mouse_position_scale, (float [2]) { 1.0f, 1.0f }, sizeof(float [2]));
 
 #   if defined (SIMPLE_BACKEND_OPENGL)
 
@@ -269,10 +269,10 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 	uint32_t				_winmask;
 
 	_winmask = 0;
-	_winmask |= CWColormap
-		| CWBorderPixel
-		| CWBackPixel
-		| CWEventMask;
+	_winmask	|= CWColormap
+				| CWBorderPixel
+				| CWBackPixel
+				| CWEventMask;
 	_swinattr = (XSetWindowAttributes) { 0 };
 
 	SIMPLE.s_window.dsp = XOpenDisplay(NULL);
@@ -339,13 +339,13 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 		_vi->visual,
 		AllocNone
 	);
-	_swinattr.event_mask |= ClientMessage
-		| StructureNotifyMask
-		| KeyPressMask
-		| KeyReleaseMask
-		| PointerMotionMask
-		| ButtonPressMask
-		| ButtonReleaseMask;
+	_swinattr.event_mask	|= ClientMessage
+							| StructureNotifyMask
+							| KeyPressMask
+							| KeyReleaseMask
+							| PointerMotionMask
+							| ButtonPressMask
+							| ButtonReleaseMask;
 	SIMPLE.s_window.w_id = XCreateWindow(
 		SIMPLE.s_window.dsp,
 		SIMPLE.s_window.r_id,
@@ -651,11 +651,19 @@ SAPI int	key_release(int key) {
 }
 
 SAPI int	mouse_position_x(void) {
-	return (SIMPLE.s_input.mouse_position_current[0]);
+	return ((SIMPLE.s_input.mouse_position_current[0] + SIMPLE.s_input.mouse_position_offset[0]) * SIMPLE.s_input.mouse_position_scale[0]);
 }
 
 SAPI int	mouse_position_y(void) {
-	return (SIMPLE.s_input.mouse_position_current[1]);
+	return ((SIMPLE.s_input.mouse_position_current[1] + SIMPLE.s_input.mouse_position_offset[1]) * SIMPLE.s_input.mouse_position_scale[1]);
+}
+
+SAPI int	set_mouse_offset(int x, int y) {
+	return (memcpy(SIMPLE.s_input.mouse_position_offset, (int32_t [2]) { x, y }, sizeof(int32_t [2])) != 0);
+}
+
+SAPI int	set_mouse_scale(float x, float y) {
+	return (memcpy(SIMPLE.s_input.mouse_position_scale, (float [2]) { x, y }, sizeof(float [2])) != 0);
 }
 
 SAPI int	mouse_delta_x(void) {
