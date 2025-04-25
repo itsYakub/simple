@@ -455,7 +455,7 @@ SAPI int	poll_events(void) {
 
 #   if defined (SIMPLE_BACKEND_OPENGL)
 
-				glViewport(0, 0, window_width(), window_height());
+				glViewport(0, 0, _attr.width, _attr.height);
 
 #   endif /* SIMPLE_BACKEND_OPENGL */
 							
@@ -471,14 +471,18 @@ SAPI int	poll_events(void) {
 				size_t	_keysym;
 
 				_keysym = XkbKeycodeToKeysym(SIMPLE.s_window.dsp, _event.xkey.keycode, 0, 0);
-				SIMPLE.s_input.key_input_current[_keysym] = 1;
+				if (_keysym < SIMPLE_INPUT_KEYBOARD_KEYS) {
+					SIMPLE.s_input.key_input_current[_keysym] = 1;
+				}
 			} break;
 			
 			case (KeyRelease): {
 				size_t	_keysym;
 
 				_keysym = XkbKeycodeToKeysym(SIMPLE.s_window.dsp, _event.xkey.keycode, 0, 0);
-				SIMPLE.s_input.key_input_current[_keysym] = 0;
+				if (_keysym < SIMPLE_INPUT_KEYBOARD_KEYS) {
+					SIMPLE.s_input.key_input_current[_keysym] = 0;
+				}
 			} break;
 
 			case (ButtonPress): {
@@ -611,7 +615,7 @@ SAPI int	monitor_width(void) {
 	return (_attr.width);
 }
 
-SAPI int	monitor_hegith(void) {
+SAPI int	monitor_height(void) {
 	XWindowAttributes	_attr;
 
 	XGetWindowAttributes(SIMPLE.s_window.dsp, SIMPLE.s_window.r_id, &_attr);
@@ -707,8 +711,8 @@ SAPI int	*pixel(int x, int y) {
 
 #  if defined (SIMPLE_BACKEND_SOFTWARE)
 
-	x = (x < 0 ? 0 : (x >= SIMPLE.s_framebuffer.width ? SIMPLE.s_framebuffer.width - 1 : x));
-	y = (y < 0 ? 0 : (y >= SIMPLE.s_framebuffer.height ? SIMPLE.s_framebuffer.height - 1 : y));
+	x = (x < 0 ? 0 : (x >= (int) SIMPLE.s_framebuffer.width ? (int) SIMPLE.s_framebuffer.width - 1 : x));
+	y = (y < 0 ? 0 : (y >= (int) SIMPLE.s_framebuffer.height ? (int) SIMPLE.s_framebuffer.height - 1 : y));
 	return ((int32_t *) &SIMPLE.s_framebuffer.pixels[y * pixels_width() + x]);
 
 #  endif /* SIMPLE_BACKEND_SOFTWARE */
