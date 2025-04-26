@@ -152,6 +152,7 @@ struct s_simple {
 		uint32_t	width;
 		uint32_t	height;
 		bool		quit;
+		bool		ready;
 
 #  if defined (__linux__)
 
@@ -256,6 +257,7 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 	SIMPLE.s_window.width = w;
 	SIMPLE.s_window.height = h;
 	SIMPLE.s_window.quit = false;
+	SIMPLE.s_window.ready = false;
 	memset(&SIMPLE.s_input, 0, sizeof(SIMPLE.s_input));
 	memcpy(SIMPLE.s_input.mouse_position_scale, (float [2]) { 1.0f, 1.0f }, sizeof(float [2]));
 
@@ -416,6 +418,7 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 	XSetWMProtocols(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &SIMPLE.s_window.wm_message_quit, 1);
 	XMapWindow(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id);
 	XFree(_vi);
+	SIMPLE.s_window.ready = true;
 	window_state(SIMPLE.s_window.flags);
 
 	SIMPLE_LOG_INFO("Platform - GNU/Linux\n");
@@ -612,10 +615,17 @@ SAPI int	display(void) {
 }
 
 SAPI int	window_flags(unsigned flags) {
+	if (SIMPLE.s_window.ready) {
+		return (!SIMPLE_LOG_WARN("This function won't take any effect because the window is already created. To change the window configuration, call the 'window_state()' function\n"));
+	}
 	return (SIMPLE.s_window.flags |= flags);
 }
 
 SAPI int	window_state(unsigned flags) {
+	if (!SIMPLE.s_window.ready) {
+		SIMPLE_LOG_WARN("'window_state()' function requires a valid window to be created. Redirecting to 'window_flags()'\n");
+		return (window_flags(flags));
+	}
 	/*	If we don't specify that we want to have a resizable window, let's disable resizing
 	 * */
 	if (!(SIMPLE.s_window.flags & FLAG_WINDOW_RESIZABLE)) {
