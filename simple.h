@@ -21,6 +21,10 @@ extern "C" {
 
 # endif /* __cplusplus */
 
+enum {
+	FLAG_WINDOW_RESIZABLE = 0x00000001
+};
+
 /*	API: General
  * */
 
@@ -31,6 +35,9 @@ SAPI int	poll_events(void);
 SAPI int	should_quit(void);
 SAPI int	clear(float, float, float, float);
 SAPI int	display(void);
+
+SAPI int	window_flags(unsigned);
+SAPI int	window_state(unsigned);
 
 SAPI int	window_width(void);
 SAPI int	window_height(void);
@@ -141,6 +148,7 @@ SAPI int	pixels_height(void);
 
 struct s_simple {
 	struct {
+		uint32_t	flags;
 		uint32_t	width;
 		uint32_t	height;
 		bool		quit;
@@ -238,6 +246,8 @@ static int	_context_attributes[] = {
  *
  *	Useful sources:
  *	- http://xahlee.info/linux/linux_x11_mouse_button_number.html
+ *	- https://github.com/42paris/minilibx-linux
+ *	- https://github.com/raysan5/raylib
  * */
 
 #  if defined (__linux__)
@@ -406,6 +416,7 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 	XSetWMProtocols(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &SIMPLE.s_window.wm_message_quit, 1);
 	XMapWindow(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id);
 	XFree(_vi);
+	window_state(SIMPLE.s_window.flags);
 
 	SIMPLE_LOG_INFO("Platform - GNU/Linux\n");
 	SIMPLE_LOG_INFO("Front - End: X11\n");
@@ -597,6 +608,30 @@ SAPI int	display(void) {
 
 #  endif /* SIMPLE_BACKEND_OPENGL, SIMPLE_BACKEND_SOFTWARE */
 
+	return (1);
+}
+
+SAPI int	window_flags(unsigned flags) {
+	return (SIMPLE.s_window.flags |= flags);
+}
+
+SAPI int	window_state(unsigned flags) {
+	/*	If we don't specify that we want to have a resizable window, let's disable resizing
+	 * */
+	if (!(SIMPLE.s_window.flags & FLAG_WINDOW_RESIZABLE)) {
+		XSizeHints	_hints;
+		long		_toto;
+
+		XGetWMNormalHints(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &_hints, &_toto);
+		_hints.width = SIMPLE.s_window.width;
+		_hints.height = SIMPLE.s_window.height;
+		_hints.min_width = SIMPLE.s_window.width;
+		_hints.min_height = SIMPLE.s_window.height;
+		_hints.max_width = SIMPLE.s_window.width;
+		_hints.max_height = SIMPLE.s_window.height;
+		_hints.flags = PPosition | PSize | PMinSize | PMaxSize;
+		XSetWMNormalHints(SIMPLE.s_window.dsp, SIMPLE.s_window.w_id, &_hints);
+	}
 	return (1);
 }
 
