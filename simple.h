@@ -260,6 +260,7 @@ SAPI int	init(unsigned w, unsigned h, const char *t) {
 	SIMPLE.s_window.ready = false;
 	memset(&SIMPLE.s_input, 0, sizeof(SIMPLE.s_input));
 	memcpy(SIMPLE.s_input.mouse_position_scale, (float [2]) { 1.0f, 1.0f }, sizeof(float [2]));
+	SIMPLE.s_time.previous = SIMPLE.s_time.current = get_time();
 
 #   if defined (SIMPLE_BACKEND_OPENGL)
 
